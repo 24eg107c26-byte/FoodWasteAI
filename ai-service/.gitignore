@@ -1,0 +1,30 @@
+# Secrets and environment configuration
+/backend/src/main/resources/application.properties
+/backend/src/main/resources/application-*.properties
+**/application.properties
+.env
+.env.*
+!.env.example
+
+# Java / Maven
+**/target/
+
+# Node / React
+**/node_modules/
+**/dist/
+
+# Python
+**/venv/
+**/.venv/
+**/__pycache__/
+**/*.pyc
+
+# Local model and generated files
+**/*.log
+
+# IDE and operating system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+backend/src/main/resources/application.properties

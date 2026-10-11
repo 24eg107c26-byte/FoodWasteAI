@@ -1,0 +1,14 @@
+﻿/backend/src/main/resources/application.properties
+/backend/src/main/resources/application-*.properties
+**/application.properties
+.env
+.env.*
+**/target/
+**/node_modules/
+**/dist/
+**/venv/
+**/.venv/
+**/__pycache__/
+**/*.pyc
+.vscode/
+.idea/
