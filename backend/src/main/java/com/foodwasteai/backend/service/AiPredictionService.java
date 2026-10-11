@@ -1,6 +1,6 @@
-
 package com.foodwasteai.backend.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.ResponseEntity;
@@ -13,10 +13,13 @@ import java.util.Map;
 @Service
 public class AiPredictionService {
 
+    @Value("${app.ai-service.url:http://localhost:8000}")
+    private String aiServiceUrl;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     public Map<?, ?> predict(Map<String, Object> foodData) {
-        String url = "http://localhost:8000/predict";
+        String url = aiServiceUrl + "/predict";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
