@@ -3,6 +3,7 @@ package com.foodwasteai.backend.config;
 import com.foodwasteai.backend.security.JwtAuthFilter;
 import com.foodwasteai.backend.security.JwtUtil;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -38,11 +39,16 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // One CORS setting for the whole backend (React on 5173 or 5174).
+    // One CORS setting for the whole backend.
+    // Allows the deployed frontend (FRONTEND_URL) and local development.
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${app.cors.allowed-origin}") String allowedOrigin) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174"));
+        config.setAllowedOrigins(List.of(
+                allowedOrigin.trim(),
+                "http://localhost:5173",
+                "http://localhost:5174"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
 
