@@ -3,15 +3,11 @@ import { Link } from "react-router-dom";
 import api from "../services/api";
 import "../styles/prediction.css";
 
-// No login exists yet, so we use donor 1 (same as your test record).
-// Later this will come from the logged-in user.
 const DONOR_ID = 1;
 
-// IMPORTANT: these values must match the categories in your training dataset.
 const FOOD_TYPES = ["Rice", "Chapati", "Dal", "Biryani", "Pasta", "Vegetables"];
 const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner"];
 
-// The index is the number sent to the AI model (0 = Monday ... 6 = Sunday)
 const DAYS = [
   "Monday",
   "Tuesday",
@@ -22,8 +18,8 @@ const DAYS = [
   "Sunday",
 ];
 
-const todayString = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
-const todayIndex = () => (new Date().getDay() + 6) % 7; // JS: Sunday = 0, so shift
+const todayString = () => new Date().toLocaleDateString("en-CA");
+const todayIndex = () => (new Date().getDay() + 6) % 7;
 
 function FoodPrediction() {
   const [form, setForm] = useState({
@@ -34,6 +30,7 @@ function FoodPrediction() {
     quantityPrepared: "",
     quantityConsumed: "",
   });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
@@ -55,24 +52,30 @@ function FoodPrediction() {
       setError("Number of customers must be a whole number greater than 0.");
       return;
     }
-    if (!(prepared > 0)) {
+
+    if (!Number.isFinite(prepared) || prepared <= 0) {
       setError("Quantity prepared must be greater than 0.");
       return;
     }
-    if (form.quantityConsumed !== "" && Number(form.quantityConsumed) < 0) {
+
+    if (
+      form.quantityConsumed !== "" &&
+      (!Number.isFinite(Number(form.quantityConsumed)) ||
+        Number(form.quantityConsumed) < 0)
+    ) {
       setError("Quantity consumed cannot be negative.");
       return;
     }
 
     setLoading(true);
+
     try {
-      // Step 1: save the food record (the backend needs its id for the prediction)
       const recordResponse = await api.post("/food-records", {
         donorId: DONOR_ID,
         foodType: form.foodType,
         quantityPrepared: prepared,
         quantityConsumed:
-            form.quantityConsumed === "" ? 0 : Number(form.quantityConsumed),
+          form.quantityConsumed === "" ? 0 : Number(form.quantityConsumed),
         numberOfCustomers: customers,
         mealType: form.mealType,
         dayOfWeek: DAYS[dayIndex],
@@ -80,13 +83,13 @@ function FoodPrediction() {
       });
 
       const foodRecordId = recordResponse.data.id;
+
       if (!foodRecordId) {
         throw new Error("The backend did not return an id for the food record.");
       }
 
-      // Step 2: ask the AI model for a prediction (snake_case fields)
       const predictionResponse = await api.post("/predictions/predict", {
-        foodRecordId: foodRecordId,
+        foodRecordId,
         food_type: form.foodType,
         meal_type: form.mealType,
         day_of_week: dayIndex,
@@ -117,179 +120,281 @@ function FoodPrediction() {
     setError("");
   };
 
-  // Values for the result display
-  const prepared = result ? Number(result.quantity_prepared) : 0;
-  const consumption = result ? Number(result.predicted_consumption) : 0;
-  const surplus = result ? Number(result.predicted_surplus) : 0;
-  const surplusPercent = prepared > 0 ? Math.round((surplus / prepared) * 100) : 0;
+  const prepared = result ? Number(result.quantity_prepared) || 0 : 0;
+  const consumption = result ? Number(result.predicted_consumption) || 0 : 0;
+  const surplus = result ? Number(result.predicted_surplus) || 0 : 0;
+
+  const safeSurplus = Math.max(0, Math.min(surplus, prepared));
+  const surplusPercent =
+    prepared > 0 ? Math.round((safeSurplus / prepared) * 100) : 0;
 
   return (
-    <div className="fp-page">
-      <div className="fp-header">
-        <Link to="/" className="fp-back">
-          ← Home
-        </Link>
-        <h1>Food Surplus Prediction</h1>
-        <p className="fp-flow">
-          Food → AI Prediction → Surplus → Donation → Reduced Waste
-        </p>
-      </div>
+    <main className="fp-page">
+      <header className="fp-header">
+        <div className="fp-breadcrumb">
+          <Link to="/">Home</Link>
+          <span>/</span>
+          <span>Food Prediction</span>
+        </div>
+
+        <div className="fp-heading-row">
+          <div>
+            <span className="fp-eyebrow">SMART FOOD MANAGEMENT</span>
+            <h1>Food Surplus Prediction</h1>
+            <p>
+              Make smarter food decisions with AI-powered surplus estimates.
+              Plan better, donate more, and waste less.
+            </p>
+          </div>
+
+          <div className="fp-header-art" aria-hidden="true">
+            <span className="fp-art-spark">✳</span>
+            <span className="fp-art-leaf">❧</span>
+            <span className="fp-art-circle" />
+          </div>
+        </div>
+
+        <div className="fp-flow">
+          <span>01</span> Food details
+          <i>→</i>
+          <span>02</span> AI prediction
+          <i>→</i>
+          <span>03</span> Reduce waste
+        </div>
+      </header>
+
+      {error && (
+        <div className="fp-error" role="alert">
+          <span className="fp-error-icon">!</span>
+          <span>{error}</span>
+        </div>
+      )}
 
       <div className="fp-layout">
-        {/* ---------- FORM ---------- */}
-        <form className="fp-card" onSubmit={handleSubmit}>
-          <h2>Enter food details</h2>
+        <form className="fp-card fp-form-card" onSubmit={handleSubmit}>
+          <div className="fp-card-heading">
+            <div className="fp-heading-icon">▤</div>
+            <div>
+              <h2>Food details</h2>
+              <p>Enter information about the meal you've prepared.</p>
+            </div>
+          </div>
 
-          <label>
-            Food type
-            <select name="foodType" value={form.foodType} onChange={handleChange}>
-              {FOOD_TYPES.map((f) => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="fp-form-grid">
+            <label className="fp-field">
+              <span>Food type</span>
+              <select
+                name="foodType"
+                value={form.foodType}
+                onChange={handleChange}
+              >
+                {FOOD_TYPES.map((food) => (
+                  <option key={food} value={food}>{food}</option>
+                ))}
+              </select>
+            </label>
 
-          <label>
-            Meal type
-            <select name="mealType" value={form.mealType} onChange={handleChange}>
-              {MEAL_TYPES.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label className="fp-field">
+              <span>Meal type</span>
+              <select
+                name="mealType"
+                value={form.mealType}
+                onChange={handleChange}
+              >
+                {MEAL_TYPES.map((meal) => (
+                  <option key={meal} value={meal}>{meal}</option>
+                ))}
+              </select>
+            </label>
 
-          <label>
-            Day of week
-            <select name="dayOfWeek" value={form.dayOfWeek} onChange={handleChange}>
-              {DAYS.map((d, index) => (
-                <option key={d} value={index}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label className="fp-field fp-field-full">
+              <span>Day of the week</span>
+              <select
+                name="dayOfWeek"
+                value={form.dayOfWeek}
+                onChange={handleChange}
+              >
+                {DAYS.map((day, index) => (
+                  <option key={day} value={index}>{day}</option>
+                ))}
+              </select>
+            </label>
 
-          <label>
-            Expected number of customers
-            <input
-              type="number"
-              name="numberOfCustomers"
-              min="1"
-              step="1"
-              placeholder="e.g. 150"
-              value={form.numberOfCustomers}
-              onChange={handleChange}
-              required
-            />
-          </label>
+            <label className="fp-field fp-field-full">
+              <span>Expected number of customers</span>
+              <input
+                type="number"
+                name="numberOfCustomers"
+                min="1"
+                step="1"
+                placeholder="e.g. 150 customers"
+                value={form.numberOfCustomers}
+                onChange={handleChange}
+                required
+              />
+              <small>Enter the expected number of people eating.</small>
+            </label>
 
-          <label>
-            Quantity prepared (portions)
-            <input
-              type="number"
-              name="quantityPrepared"
-              min="1"
-              step="any"
-              placeholder="e.g. 180"
-              value={form.quantityPrepared}
-              onChange={handleChange}
-              required
-            />
-          </label>
+            <label className="fp-field fp-field-full">
+              <span>Quantity prepared <i>(portions)</i></span>
+              <input
+                type="number"
+                name="quantityPrepared"
+                min="0.01"
+                step="any"
+                placeholder="e.g. 180 portions"
+                value={form.quantityPrepared}
+                onChange={handleChange}
+                required
+              />
+            </label>
 
-          <label>
-            Quantity consumed (optional)
-            <input
-              type="number"
-              name="quantityConsumed"
-              min="0"
-              step="any"
-              placeholder="Leave blank if not known yet"
-              value={form.quantityConsumed}
-              onChange={handleChange}
-            />
-          </label>
+            <label className="fp-field fp-field-full">
+              <span>Quantity consumed <i>(optional)</i></span>
+              <input
+                type="number"
+                name="quantityConsumed"
+                min="0"
+                step="any"
+                placeholder="Leave blank if not known yet"
+                value={form.quantityConsumed}
+                onChange={handleChange}
+              />
+              <small>If unknown, the record will save 0 for this field.</small>
+            </label>
+          </div>
 
-          {error && <div className="fp-error">{error}</div>}
+          <div className="fp-form-footer">
+            <p><span>✳</span> Your details will be used to request an AI estimate.</p>
 
-          <button type="submit" className="fp-button" disabled={loading}>
-            {loading ? "Predicting..." : "Predict Surplus"}
-          </button>
+            <button type="submit" className="fp-button" disabled={loading}>
+              {loading ? (
+                <>
+                  <span className="fp-button-spinner" />
+                  Generating prediction...
+                </>
+              ) : (
+                <>Predict surplus <span>→</span></>
+              )}
+            </button>
+          </div>
         </form>
 
-        {/* ---------- RESULT ---------- */}
-        <div className="fp-card">
-          <h2>Prediction result</h2>
+        <section className="fp-card fp-result-card">
+          <div className="fp-card-heading">
+            <div className="fp-heading-icon fp-result-icon">✳</div>
+            <div>
+              <h2>AI prediction result</h2>
+              <p>Your estimated food consumption and surplus.</p>
+            </div>
+          </div>
 
-          {loading && <p className="fp-muted">Asking the AI model...</p>}
+          {loading && (
+            <div className="fp-empty-state">
+              <div className="fp-ai-loader"><span>✳</span></div>
+              <h3>Analysing your food data</h3>
+              <p>The AI service is generating your prediction. This may take a moment.</p>
+            </div>
+          )}
 
           {!loading && !result && (
-            <p className="fp-muted">
-              Fill in the form and click <strong>Predict Surplus</strong>. The
-              result will appear here.
-            </p>
+            <div className="fp-empty-state">
+              <div className="fp-empty-illustration">
+                <span>♧</span>
+                <i>✳</i>
+              </div>
+              <h3>Your results will appear here</h3>
+              <p>
+                Complete the food details and select Predict surplus to see
+                your AI-generated estimate.
+              </p>
+              <div className="fp-empty-tip">
+                <span>TIP</span>
+                More accurate input records can help you evaluate your food planning.
+              </div>
+            </div>
           )}
 
           {result && !loading && (
             <>
+              <div className="fp-result-success">
+                <span>✓</span> Prediction generated successfully
+              </div>
+
               <div className="fp-stats">
                 <div className="fp-stat fp-stat-consumed">
                   <span className="fp-stat-label">Predicted consumption</span>
-                  <span className="fp-stat-value">{consumption.toFixed(1)}</span>
+                  <strong className="fp-stat-value">{consumption.toFixed(1)}</strong>
                   <span className="fp-stat-unit">{result.unit}</span>
+                  <span className="fp-stat-caption">Expected to be consumed</span>
                 </div>
+
                 <div className="fp-stat fp-stat-surplus">
                   <span className="fp-stat-label">Predicted surplus</span>
-                  <span className="fp-stat-value">{surplus.toFixed(1)}</span>
+                  <strong className="fp-stat-value">{surplus.toFixed(1)}</strong>
                   <span className="fp-stat-unit">{result.unit}</span>
+                  <span className="fp-stat-caption">Potentially left over</span>
                 </div>
               </div>
 
-              <p className="fp-bar-label">
-                Of {prepared} {result.unit} prepared, about {surplusPercent}% may
-                be left over.
-              </p>
-              <div className="fp-bar">
-                <div
-                  className="fp-bar-consumed"
-                  style={{ width: `${100 - surplusPercent}%` }}
-                />
-                <div
-                  className="fp-bar-surplus"
-                  style={{ width: `${surplusPercent}%` }}
-                />
-              </div>
-              <div className="fp-legend">
-                <span>
-                  <i className="fp-dot fp-dot-consumed" /> Consumed
-                </span>
-                <span>
-                  <i className="fp-dot fp-dot-surplus" /> Surplus
-                </span>
+              <div className="fp-breakdown">
+                <div className="fp-breakdown-heading">
+                  <h3>Prepared food breakdown</h3>
+                  <span>{prepared} {result.unit}</span>
+                </div>
+
+                <div className="fp-bar" aria-label="Estimated food breakdown">
+                  <div
+                    className="fp-bar-consumed"
+                    style={{ width: `${100 - surplusPercent}%` }}
+                  />
+                  <div
+                    className="fp-bar-surplus"
+                    style={{ width: `${surplusPercent}%` }}
+                  />
+                </div>
+
+                <div className="fp-legend">
+                  <span><i className="fp-dot fp-dot-consumed" /> Predicted consumption</span>
+                  <span><i className="fp-dot fp-dot-surplus" /> Potential surplus</span>
+                </div>
+
+                <div className="fp-surplus-callout">
+                  <div className="fp-callout-icon">↗</div>
+                  <div>
+                    <strong>Approximately {surplusPercent}% potential surplus</strong>
+                    <p>About {surplus.toFixed(1)} {result.unit} may remain, according to this estimate.</p>
+                  </div>
+                </div>
               </div>
 
-              <p className="fp-saved">
-                ✔ Saved to database (prediction ID {result.id}, food record ID{" "}
-                {result.foodRecordId})
-              </p>
+              <div className="fp-saved">
+                <span>✓</span>
+                <div>
+                  <strong>Record saved successfully</strong>
+                  <p>
+                    Prediction #{result.id} · Food record #{result.foodRecordId}
+                  </p>
+                </div>
+              </div>
 
               <p className="fp-note">
-                This is an estimate from a model trained on synthetic data, not a
-                guarantee.
+                This is an estimate from a model trained on synthetic data,
+                not a guarantee of actual consumption or surplus.
               </p>
 
-              <button type="button" className="fp-button-secondary" onClick={handleReset}>
+              <button
+                type="button"
+                className="fp-button-secondary"
+                onClick={handleReset}
+              >
                 Clear result
               </button>
             </>
           )}
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
 
