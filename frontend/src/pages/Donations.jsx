@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "./../services/api";
 import { useAuth } from "../context/AuthContext";
+import "../styles/donations.css";
 
 function Donations() {
   const { user } = useAuth();
@@ -47,7 +48,6 @@ function Donations() {
     setLoading(true);
 
     try {
-      // donorId is not sent: the backend takes it from your login token.
       await api.post("/donations", {
         foodType,
         quantity: Number(quantity),
@@ -72,9 +72,7 @@ function Donations() {
     setMessage("");
 
     try {
-      // recipientId is not sent: the backend takes it from your login token.
       await api.post(`/donations/${id}/claim`);
-
       setMessage("Donation claimed successfully!");
       await fetchDonations();
     } catch (error) {
@@ -83,137 +81,199 @@ function Donations() {
   };
 
   return (
-    <div style={styles.page}>
-      <h1>Food Donations</h1>
-      <p>Share surplus food and help reduce food waste.</p>
+    <main className="donations-page">
+      <section className="donations-hero">
+        <div className="donations-hero-content">
+          <span className="donations-eyebrow">FOOD WASTE REDUCTION</span>
+          <h1>Food Donations</h1>
+          <p>
+            Every meal shared makes a difference. Connect surplus food
+            with people who need it.
+          </p>
+
+          <div className="donations-hero-points">
+            <span>♻ Reduce waste</span>
+            <span>♥ Support communities</span>
+          </div>
+        </div>
+
+        <div className="donations-hero-icon" aria-hidden="true">
+          <span>🥗</span>
+        </div>
+      </section>
+
+      {message && (
+        <div className="donations-message" role="status">
+          <span>{message}</span>
+          <button
+            type="button"
+            className="donations-message-close"
+            onClick={() => setMessage("")}
+            aria-label="Dismiss message"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {isDonor && (
-        <section style={styles.card}>
-          <h2>Donate Surplus Food</h2>
+        <section className="donations-panel">
+          <div className="donations-section-heading">
+            <div className="donations-heading-icon">＋</div>
+            <div>
+              <h2>Donate Surplus Food</h2>
+              <p>Provide a few details to share your available food.</p>
+            </div>
+          </div>
 
-          <form onSubmit={handleSubmit} style={styles.form}>
-            <label>Food Type</label>
-            <select
-              value={foodType}
-              onChange={(e) => setFoodType(e.target.value)}
-              style={styles.input}
-            >
-              <option>Rice</option>
-              <option>Chapati</option>
-              <option>Dal</option>
-              <option>Biryani</option>
-              <option>Pasta</option>
-              <option>Vegetables</option>
-            </select>
+          <form onSubmit={handleSubmit} className="donations-form">
+            <div className="donations-field">
+              <label htmlFor="donation-food-type">Food Type</label>
+              <select
+                id="donation-food-type"
+                value={foodType}
+                onChange={(e) => setFoodType(e.target.value)}
+                required
+              >
+                <option>Rice</option>
+                <option>Chapati</option>
+                <option>Dal</option>
+                <option>Biryani</option>
+                <option>Pasta</option>
+                <option>Vegetables</option>
+              </select>
+            </div>
 
-            <label>Quantity (kg)</label>
-            <input
-              type="number"
-              min="0.1"
-              step="0.1"
-              required
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="Enter quantity"
-              style={styles.input}
-            />
+            <div className="donations-field">
+              <label htmlFor="donation-quantity">Quantity (kg)</label>
+              <input
+                id="donation-quantity"
+                type="number"
+                min="0.1"
+                step="0.1"
+                required
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                placeholder="e.g. 5"
+              />
+            </div>
 
-            <label>Pickup Location</label>
-            <input
-              type="text"
-              required
-              value={pickupLocation}
-              onChange={(e) => setPickupLocation(e.target.value)}
-              placeholder="Enter pickup location"
-              style={styles.input}
-            />
+            <div className="donations-field donations-field-full">
+              <label htmlFor="donation-location">Pickup Location</label>
+              <input
+                id="donation-location"
+                type="text"
+                required
+                value={pickupLocation}
+                onChange={(e) => setPickupLocation(e.target.value)}
+                placeholder="Enter the complete pickup address"
+              />
+            </div>
 
-            <label>Expiry Date</label>
-            <input
-              type="date"
-              min={minDate}
-              required
-              value={expiryDate}
-              onChange={(e) => setExpiryDate(e.target.value)}
-              style={styles.input}
-            />
+            <div className="donations-field donations-field-full">
+              <label htmlFor="donation-expiry">Expiry Date</label>
+              <input
+                id="donation-expiry"
+                type="date"
+                min={minDate}
+                required
+                value={expiryDate}
+                onChange={(e) => setExpiryDate(e.target.value)}
+              />
+            </div>
 
-            <button type="submit" disabled={loading} style={styles.button}>
-              {loading ? "Submitting..." : "Donate Food"}
-            </button>
+            <div className="donations-field-full">
+              <button
+                type="submit"
+                className="donations-primary-button"
+                disabled={loading}
+              >
+                {loading ? "Submitting donation..." : "Donate Food →"}
+              </button>
+            </div>
           </form>
         </section>
       )}
 
-      {message && <p>{message}</p>}
-
-      <section style={styles.list}>
-        <h2>Available Donations</h2>
+      <section className="donations-list-section">
+        <div className="donations-list-heading">
+          <div>
+            <span className="donations-eyebrow">MAKE A DIFFERENCE</span>
+            <h2>Available Donations</h2>
+            <p>Explore food donations and their current status.</p>
+          </div>
+          <span className="donations-count">
+            {donations.length} {donations.length === 1 ? "listing" : "listings"}
+          </span>
+        </div>
 
         {donations.length === 0 ? (
-          <p>No available donations right now.</p>
+          <div className="donations-empty">
+            <div className="donations-empty-icon">🍽️</div>
+            <h3>No donations to display</h3>
+            <p>New food donations will appear here when available.</p>
+          </div>
         ) : (
-          donations.map((donation) => (
-            <div key={donation.id} style={styles.card}>
-              <h3>{donation.foodType}</h3>
-              <p>Quantity: {donation.quantity} kg</p>
-              <p>Pickup: {donation.pickupLocation}</p>
-              <p>Expiry: {donation.expiryDate}</p>
-              <p>Status: {donation.status}</p>
+          <div className="donations-grid">
+            {donations.map((donation) => {
+              const available = donation.status === "AVAILABLE";
 
-              {isRecipient && (
-                <button
-                  onClick={() => handleClaim(donation.id)}
-                  disabled={donation.status !== "AVAILABLE"}
-                  style={styles.button}
-                >
-                  Claim Donation
-                </button>
-              )}
-            </div>
-          ))
+              return (
+                <article className="donation-card" key={donation.id}>
+                  <div className="donation-card-top">
+                    <div className="donation-food-icon">🍲</div>
+                    <span
+                      className={`donation-status ${
+                        available ? "is-available" : "is-other"
+                      }`}
+                    >
+                      {donation.status}
+                    </span>
+                  </div>
+
+                  <h3>{donation.foodType}</h3>
+
+                  <div className="donation-quantity">
+                    <strong>{donation.quantity}</strong>
+                    <span>kg available</span>
+                  </div>
+
+                  <div className="donation-details">
+                    <div className="donation-detail-row">
+                      <span className="donation-detail-icon">⌖</span>
+                      <div>
+                        <small>Pickup location</small>
+                        <p>{donation.pickupLocation}</p>
+                      </div>
+                    </div>
+
+                    <div className="donation-detail-row">
+                      <span className="donation-detail-icon">◷</span>
+                      <div>
+                        <small>Expiry date</small>
+                        <p>{donation.expiryDate}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {isRecipient && (
+                    <button
+                      type="button"
+                      className="donations-claim-button"
+                      onClick={() => handleClaim(donation.id)}
+                      disabled={!available}
+                    >
+                      {available ? "Claim Donation →" : "Not Available"}
+                    </button>
+                  )}
+                </article>
+              );
+            })}
+          </div>
         )}
       </section>
-    </div>
+    </main>
   );
 }
-
-const styles = {
-  page: {
-    maxWidth: "700px",
-    margin: "30px auto",
-    padding: "20px",
-    fontFamily: "Arial, sans-serif"
-  },
-  card: {
-    border: "1px solid #ddd",
-    borderRadius: "8px",
-    padding: "20px",
-    marginTop: "20px"
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px"
-  },
-  input: {
-    padding: "10px",
-    border: "1px solid #ccc",
-    borderRadius: "5px",
-    fontSize: "15px"
-  },
-  button: {
-    padding: "11px",
-    marginTop: "10px",
-    backgroundColor: "#218838",
-    color: "white",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer"
-  },
-  list: {
-    marginTop: "30px"
-  }
-};
 
 export default Donations;
