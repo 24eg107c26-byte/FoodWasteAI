@@ -47,6 +47,8 @@ function AdminPanel() {
   const [reports, setReports] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busyId, setBusyId] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -76,6 +78,24 @@ function AdminPanel() {
     load();
   }, []);
 
+  const handleVerify = async (id) => {
+    setMessage("");
+    setBusyId(id);
+    try {
+      const response = await api.post(`/admin/users/${id}/verify`);
+      setUsers((list) => list.map((u) => (u.id === id ? response.data : u)));
+      setMessage(`${response.data.name} has been verified.`);
+    } catch (err) {
+      setMessage(
+        err.response?.data?.error || "Could not verify this user. Please try again."
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const pendingCount = users.filter((u) => u.role === "RECIPIENT" && !u.verified).length;
+
   const tabs = [
     { key: "users", label: `Users (${users.length})` },
     { key: "donations", label: `Donations (${donations.length})` },
@@ -86,9 +106,13 @@ function AdminPanel() {
   return (
     <div className="hs-page">
       <h1>Admin Panel</h1>
-      <p className="hs-sub">Monitor users, donations and AI predictions (read-only).</p>
+      <p className="hs-sub">
+        Monitor users, donations and AI predictions. Verify recipient organizations so they
+        can claim food.
+      </p>
 
       {error && <div className="hs-error">{error}</div>}
+      {message && <div className="hs-info">{message}</div>}
       {loading && <p className="hs-muted">Loading...</p>}
 
       {!loading && !error && (
@@ -104,6 +128,12 @@ function AdminPanel() {
               </button>
             ))}
           </div>
+
+          {tab === "users" && pendingCount > 0 && (
+            <p className="hs-muted">
+              {pendingCount} recipient(s) waiting for verification.
+            </p>
+          )}
 
           {tab === "reports" && reports && (
             <div className="rp-grid">
@@ -158,6 +188,8 @@ function AdminPanel() {
                       <th>Role</th>
                       <th>Phone</th>
                       <th>Location</th>
+                      <th>Verified</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -173,6 +205,32 @@ function AdminPanel() {
                         </td>
                         <td>{u.phone || "-"}</td>
                         <td>{u.location || "-"}</td>
+                        <td>
+                          {u.role === "RECIPIENT" ? (
+                            <span
+                              className={
+                                u.verified ? "ad-flag ad-flag-yes" : "ad-flag ad-flag-no"
+                              }
+                            >
+                              {u.verified ? "VERIFIED" : "PENDING"}
+                            </span>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                        <td>
+                          {u.role === "RECIPIENT" && !u.verified ? (
+                            <button
+                              className="hs-action"
+                              disabled={busyId === u.id}
+                              onClick={() => handleVerify(u.id)}
+                            >
+                              {busyId === u.id ? "Saving..." : "Verify"}
+                            </button>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

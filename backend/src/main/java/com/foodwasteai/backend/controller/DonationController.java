@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/donations")
@@ -101,5 +102,12 @@ public class DonationController {
                 donationId, AuthUtil.userId(authentication));
 
         return ResponseEntity.ok(completed);
+    }
+
+    // Turns errors into simple JSON like {"error": "..."} that React can show.
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> handleStatus(ResponseStatusException e) {
+        return ResponseEntity.status(e.getStatusCode())
+                .body(Map.of("error", String.valueOf(e.getReason())));
     }
 }

@@ -1,7 +1,9 @@
 package com.foodwasteai.backend.service;
 
 import com.foodwasteai.backend.entity.Donation;
+import com.foodwasteai.backend.entity.User;
 import com.foodwasteai.backend.repository.DonationRepository;
+import com.foodwasteai.backend.repository.UserRepository;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,9 +18,12 @@ import static org.springframework.http.HttpStatus.*;
 public class DonationService {
 
     private final DonationRepository donationRepository;
+    private final UserRepository userRepository;
 
-    public DonationService(DonationRepository donationRepository) {
+    public DonationService(DonationRepository donationRepository,
+                           UserRepository userRepository) {
         this.donationRepository = donationRepository;
+        this.userRepository = userRepository;
     }
 
     public Donation createDonation(Donation donation) {
@@ -94,6 +99,18 @@ public class DonationService {
                 || recipientId == null || recipientId <= 0) {
             throw new ResponseStatusException(
                     BAD_REQUEST, "Valid donation and recipient IDs are required");
+        }
+
+        // Checked in the database at claim time, so a change by the admin
+        // takes effect immediately (the login token is not used for this).
+        User recipient = userRepository.findById(recipientId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        NOT_FOUND, "User not found"));
+
+        if (!recipient.isVerified()) {
+            throw new ResponseStatusException(
+                    FORBIDDEN,
+                    "Your organization has not been verified by an admin yet");
         }
 
         Donation donation = donationRepository.findById(donationId)
