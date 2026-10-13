@@ -2,14 +2,21 @@ package com.foodwasteai.backend.controller;
 
 import com.foodwasteai.backend.entity.Donation;
 import com.foodwasteai.backend.entity.Prediction;
+import com.foodwasteai.backend.entity.User;
 import com.foodwasteai.backend.repository.DonationRepository;
 import com.foodwasteai.backend.repository.PredictionRepository;
 import com.foodwasteai.backend.repository.UserRepository;
 
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -24,7 +31,8 @@ public class AdminController {
 
     // Only the fields the admin needs. The password hash is NOT included.
     public record UserSummary(Long id, String name, String email,
-                              String role, String phone, String location) {
+                              String role, String phone, String location,
+                              boolean verified) {
     }
 
     private final UserRepository userRepository;
@@ -39,13 +47,34 @@ public class AdminController {
         this.predictionRepository = predictionRepository;
     }
 
+    private UserSummary toSummary(User u) {
+        return new UserSummary(u.getId(), u.getName(), u.getEmail(),
+                u.getRole(), u.getPhone(), u.getLocation(), u.isVerified());
+    }
+
     @GetMapping("/users")
     public List<UserSummary> getUsers() {
         return userRepository.findAll(Sort.by(Sort.Direction.ASC, "id"))
                 .stream()
-                .map(u -> new UserSummary(u.getId(), u.getName(), u.getEmail(),
-                        u.getRole(), u.getPhone(), u.getLocation()))
+                .map(this::toSummary)
                 .toList();
+    }
+
+    // Mark a recipient as verified so they can claim food.
+    @PostMapping("/users/{id}/verify")
+    public UserSummary verifyUser(@PathVariable Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
+
+        if (!"RECIPIENT".equals(user.getRole())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Only recipients need verification");
+        }
+
+        user.setVerified(true);
+        userRepository.save(user);
+        return toSummary(user);
     }
 
     @GetMapping("/donations")
@@ -93,5 +122,12 @@ public class AdminController {
         report.put("usersByRole", byRole);
         report.put("surplusByFoodType", surplus);
         return report;
+    }
+
+    // Turns errors into simple JSON like {"error": "..."} that React can show.
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> handleStatus(ResponseStatusException e) {
+        return ResponseEntity.status(e.getStatusCode())
+                .body(Map.of("error", String.valueOf(e.getReason())));
     }
 }

@@ -118,3 +118,20 @@
   font-size: 0.8rem;
   color: #8a8a8a;
 }
+.ad-flag {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.ad-flag-yes {
+  background: #c8e6c9;
+  color: #1b5e20;
+}
+
+.ad-flag-no {
+  background: #fff3e0;
+  color: #e65100;
+}

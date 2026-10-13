@@ -26,6 +26,11 @@ public class User {
 
     private String location;
 
+    // Recipients must be verified by an admin before they can claim food.
+    // The default lets Spring add this column to a table that already has rows.
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean verified = false;
+
     public User() {
     }
 
@@ -93,5 +98,13 @@ public class User {
 
     public void setLocation(String location) {
         this.location = location;
+    }
+
+    public boolean isVerified() {
+        return verified;
+    }
+
+    public void setVerified(boolean verified) {
+        this.verified = verified;
     }
 }
