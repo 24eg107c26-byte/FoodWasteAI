@@ -16,6 +16,7 @@ import MyDonations from "./pages/MyDonations";
 import AdminPanel from "./pages/AdminPanel";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ServerStatus from "./components/ServerStatus";
 import "./styles/auth.css";
 import "./styles/layout.css";
 
@@ -310,6 +311,7 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <NavBar />
+        <ServerStatus />
 
         <Routes>
           <Route path="/" element={<Home />} />
